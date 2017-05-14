@@ -1,0 +1,14 @@
+{
+  "name": "koonbot",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node koonbot.js",
+	"postinstall": "./setup.sh",
+	"purge": "./purge.sh"
+  },
+  "dependencies": {
+    "request": "^2.72.0"
+  },
+  "devDependencies": {}
+}
