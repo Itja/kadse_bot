@@ -2,6 +2,8 @@
 const TeleBot = require('./telebot');
 const fs = require('fs');
 const request = require('request');
+const sys = require('util');
+const exec = require('child_process').exec;
 
 const db = require('./lib/db.js');
 const config = require('./config.js');
@@ -71,73 +73,22 @@ class Message {
 
 let commands = {
 	'/help': { act: msg => {
-		msg.reply('Kadse_Bot Version 2001 (von @Mitja)\n' +
-				'/kdtstop - Du bekommst keine Kadse des Tages mehr\n' +
-				'/kdtstart - Du bekommst wieder die Kadse des Tages\n' +
-				'/reset - Gesehene Bilder zurücksetzen\n' +
-				'/show kadse_nummer - Zeige die Kadse mit der Nummer kadse_nummer');
-		if (msg.from.isPoster()) {
-			msg.reply('Sende dem Bot ein Bild, damit er es aufnimmt. Bitte nur kadsenrelevante, schöne Bilder senden!');
-		}
+		msg.reply('PDF2PNG Bot Version 0001 (by /u/Itja)\n' +
+				'Send me a PDF and I will convert it to a PNG.');
 		if (msg.from.isAdmin()) {
-			msg.reply('Admin commands: stats shutdown user printdb delimg kdtforce');
+			msg.reply('Hi admin');
 		}
 	} }, 
 
-	'/kdtstop': { act: (msg) => {
-		msg.chat.kdt = false;
-		msg.reply('Okay, dann bekommst du halt keine Kadse des Tages mehr! (Wenn du deine Meinung änderst, schreib mir /kdtstart, um wieder Kadsen des Tages zu erhalten.)');
+	'/asfile': { act: (msg) => {
+		msg.chat.file = true;
+		msg.reply('From now on, I will send you images as a file to avoid compression through Telegram');
 	} },
 
-	'/kdtstart': { act: (msg) => {
-		msg.chat.kdt = true;
-		msg.reply('Ab sofort bekommst du wieder die Kadse des Tages!');
+	'/asimg': { act: (msg) => {
+		msg.chat.file = false;
+		msg.reply('From now on, I will send you images directly (may have compression artifacts by Telegram)');
 	} },
-
-	'/reset': { act: (msg) => {
-		msg.chat.resetSeenImages();
-		msg.reply('Deine gesehenen Bilder wurden zurückgesetzt. Viel Spaß mit dem immergleichen Catcontent!');
-	} },
-
-	'/deleteme': { act: (msg) => {
-		msg.reply('Unimplemented');
-	} },
-
-	'/stats': { 
-		act: (msg) => {
-			msg.reply(JSON.stringify(msg.chat));
-			if (msg.from.isPoster()) {
-				msg.reply('Stats for posters.. coming soon');
-			}
-			if (msg.from.isAdmin()) {
-				msg.reply('Stats for admins.. coming soon');
-			}
-		}
-	},
-	
-	'/show': {
-		act: (msg, cmd) => {
-			if (parseInt(cmd[1]) > 0) {
-				msg.chat.sendImageById(parseInt(cmd[1]));
-			} else {
-				msg.reply('Usage: /show KADSE_NUMMER');
-			}
-		}
-	},
-
-	'/shutdown': {
-		actAdmin: (msg) => {
-			db.write();
-			msg.reply('Shutdown not implemented');
-		}
-	},
-
-	'/kdtforce': {
-		actAdmin: (msg) => {
-			setImmediate(party, true);
-			msg.reply('Gonna party right away!');
-		}
-	},
 
 	'/user': {
 		actAdmin: (msg, cmd) => {
@@ -186,34 +137,6 @@ let commands = {
 		}
 	},
 
-	'/delimg': {
-		actAdmin: (msg, cmd) => {
-			try {
-				let imgid = parseInt(cmd[1]);
-				if (imgid > 0) {
-					delete db.db['images'][imgid];
-					msg.reply('If there has been such an image, it has been deleted.');
-				} else {
-					msg.reply('Usage: /delimg IMAGE_ID');
-				}
-			} catch (e) {
-				msg.reply('Error: ' + e);
-				console.log(e);
-			}
-		}
-	},
-
-	'/broadcast': {
-		actAdmin: (msg) => {
-			let bct = msg.text.substr(msg.text.indexOf(' ') + 1);
-			console.log('BROADCAST! Text is: ', bct);
-			db.getAllChatIds().forEach((cid) => {
-				let c = Chat.getById(cid);
-				c.send(bct);
-			});
-		}
-	},
-
 	'/gnampf': {
 		act: (msg) => {
 			if (msg.isFromTester()) {
@@ -229,7 +152,6 @@ let commands = {
 bot.on('text', (data, t, r) => {
 	let msg = new Message(data, t, r);
 	msg.ensureAccess(() => {
-		let sendImg = false;
 		if (msg.text.startsWith('/')) {
 			let cmd = msg.text.split(/\s+/);
 			let cmdAvailable = true;
@@ -243,98 +165,63 @@ bot.on('text', (data, t, r) => {
 				} else if (curCmd.act) {
 					curCmd.act(msg, cmd);
 				} else {
-					msg.reply('Von dir lasse ich mir soetwas nicht sagen!');
+					msg.reply('Go away.');
 					cmdAvailable = false;
 				}
 			} else {
-				msg.reply('Diesen Befehl kenne ich nicht. Vielleicht hilft dir /help ?\n Ich hoffe, du bist stattdessen mit dieser Katze zufrieden?');
+				msg.reply('I don\'t know this command. Try /help');
 				cmdAvailable = false;
-				sendImg = true;
 			}
 
 			msg.chat.log(cmdAvailable ? 'Command executed!' : 'Command NOT executed.');
-		} else { 
-			sendImg = true;
-		}
-		if (sendImg) {
-			msg.chat.sendUnseenImage();
-		}
+		} 
 		db.write(); 
 	});
 });
 
-bot.on('photo', (data, t, r) => {
+bot.on('document', (data, t, r) => {
 	let msg = new Message(data, t, r);
 	msg.ensureAccess(() => {
-		if (!msg.from.isPoster()) {
-			msg.reply('Danke für das Bild. Leider kenne ich dich noch nicht genug, um es in meine Datenbank aufzunehmen. Vielleicht ein andernmal.');
-			return;
-		}
-		bot.getFile(msg.photo[msg.photo.length - 1].file_id).then(file => {
+		let doc = msg.document;
+		console.log(msg.from.id + ' (' + msg.from.first_name + ') sent ' + doc.file_name + ' Size: ' + doc.file_size + ' (' + doc.file_id + ')');
+		bot.getFile(doc.file_id).then(file => {
 			if (file.ok) {
 				debug(file);
-				let newImage = new Image(msg.from);
-				let targetFileStream = fs.createWriteStream('img/' + newImage.filename);
+				let filename = doc.file_id + '.pdf'; 
+				let filedest = 'img/' + filename;
+				let targetFileStream = fs.createWriteStream(filedest);
 				request
 					.get('https://api.telegram.org/file/bot' + BOT_TOKEN + '/' + file.result.file_path)
 					.pipe(targetFileStream)
 					.on('error', err => {
 						console.error('Error while streaming image to file', newImage, file);
 						console.error(targetFileStream);
-						msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (3)');
+						msg.reply('Sorry, something went wrong (3)');
 					})
 					.on('finish', () => {
-						console.log('New Image (' + newImage.id + ') uploaded successful, writing config..');
-						db.addImage(newImage);
-						db.write(); 
-						return msg.reply('Danke für das Bild. Sehr hübsch. Ich habe es mit der ID ' + newImage.id + ' abgelegt.');
+						console.log('Stored as ' + filedest + '. Processing..');
+						msg.reply('Please wait while I\'m processing the file..');
+						let convprefix = 'out/' + doc.file_id;
+						let convfile = convprefix + '.png';
+						exec('pdftoppm -f 1 -singlefile -png ' + filedest + ' ' + convprefix, function(err, stdout, stderr) {
+							if (err) {
+								console.log('pdftoppm returned ERROR:', err, '. OUT:', stdout, '. ERR:', stderr);
+							} else {
+								console.log('Converted file.');
+								msg.chat.sendDocument(convfile, {fileName: doc.file_name + '.png'});
+							}
+						});
 					});
 
 			} else {
 				console.error('Error while fetching file path. The Server responded with !file.ok');
-				msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (2)');
+				msg.reply('Sorry, something went wrong (2)');
 			}
 		}).catch(e => {
 			console.error('Could not fetch file path', e, msg);
-			msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (1)');
+			msg.reply('Sorry, something went wrong (1)');
 		});
 	});
-});
-
-let party = (forced) => {
-		let curt = new Date();
-		console.log("It's showtime!", new Date());
-		db.getAllChatIds().forEach((cid) => {
-			let c = Chat.getById(cid);
-			if (!c.hasOwnProperty('kdt') || c.kdt) { //migration, if no property, then do kdt
-				c.send('Es ist ca. ' + curt.getHours() + ' Uhr und damit mal wieder Zeit für die Kadse des Tages! (Du möchtest die Kadse des Tages nicht mehr? Schreib mir /kdtstop)');
-				c.sendUnseenImage();
-			}
-		});
-		
-		console.log('Party is over.');
-		if (!forced) {
-			setTimeout(party, 1000 * 60 * 60 * 24);
-			console.log('Next Partytime set.');
-		}
-		db.write();
-	};
-
-setImmediate(() => {
-	let d = new Date();
-	let partyHour = 18;
-	let cur = new Date();
-	d.setHours(partyHour);
-	d.setMinutes(0);
-	d.setSeconds(0);
-	d.setMilliseconds(0);
-	if (cur.getHours() >= partyHour) {
-		console.log('Party is a day away :-/');
-		d.setDate(cur.getDate() + 1);
-	}
-	let diff = d.getTime() - cur.getTime();
-	console.log('Party is at ', d, ' (which is in ', diff, 'ms)');
-	setTimeout(party, diff);
 });
 
 //Bot Events: /* /<cmd> connect disconnect reconnecting reconnected update tick error inlineQuery inlineChoice callbackQuery
