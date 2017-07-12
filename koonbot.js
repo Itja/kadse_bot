@@ -7,7 +7,8 @@ const db = require('./lib/db.js');
 const config = require('./config.js');
 
 const BOT_TOKEN = config.api_token;
-const TEST_MODE = config.test_mode;
+const TEST_MODE = config.test_mode || false;
+const ALLOW_EVAL = config.allow_eval || false;
 
 const bot = new TeleBot({
 	token: BOT_TOKEN,
@@ -49,14 +50,14 @@ class Message {
 		debug('New ' + this.type + ':', this);
 	}
 
-	isFromTester() {
-		console.log('msg.isFromTester called by ', this.from);
-		console.log('testers: ', config.testers);
-		return config.testers.includes(this.from.id);
+	isFromSuperadmin() {
+		console.log('msg.isFromSuperadmin called by ', this.from);
+		console.log('superadmins: ', config.superadmins);
+		return config.superadmins.includes(this.from.id);
 	}
 
 	ensureAccess(func) {
-		if (!TEST_MODE || this.isFromTester()) {
+		if (!TEST_MODE || this.isFromSuperadmin()) {
 			func();
 		} else {
 			let replymsg = 'Tut mir leid, ' + this.from.first_name + ', aber ich werde gerade gewartet. Bitte versuch es später noch einmal!';
@@ -71,7 +72,7 @@ class Message {
 
 let commands = {
 	'/help': { act: msg => {
-		msg.reply('Kadse_Bot Version 2001 (von @Mitja)\n' +
+		msg.reply('Kadse_Bot Version 2002 (von @Mitja)\n' +
 				'/kdtstop - Du bekommst keine Kadse des Tages mehr\n' +
 				'/kdtstart - Du bekommst wieder die Kadse des Tages\n' +
 				'/reset - Gesehene Bilder zurücksetzen\n' +
@@ -80,7 +81,7 @@ let commands = {
 			msg.reply('Sende dem Bot ein Bild, damit er es aufnimmt. Bitte nur kadsenrelevante, schöne Bilder senden!');
 		}
 		if (msg.from.isAdmin()) {
-			msg.reply('Admin commands: stats shutdown user printdb delimg kdtforce');
+			msg.reply('Admin commands: stats shutdown user printdb delimg kdtforce eval');
 		}
 	} }, 
 
@@ -186,6 +187,28 @@ let commands = {
 		}
 	},
 
+	'/eval': {
+		actAdmin: (msg) => {
+			if (ALLOW_EVAL) {
+				try {
+					let command = msg.text.substr(msg.text.indexOf(' ') + 1);
+					console.log('EVAL: ', command);
+					let ret = JSON.stringify(eval(command));
+					console.log(ret);
+					if (typeof ret !== 'string') {
+						ret = typeof ret;
+					}
+					msg.reply(ret);
+				} catch (e) {
+					msg.reply('That clearly didn\'t work: ' + e.message);
+					console.log(e);
+				}
+			} else {
+				msg.reply('Eval isn\'t enabled.');
+			}
+		}
+	},
+
 	'/delimg': {
 		actAdmin: (msg, cmd) => {
 			try {
@@ -216,7 +239,7 @@ let commands = {
 
 	'/gnampf': {
 		act: (msg) => {
-			if (msg.isFromTester()) {
+			if (msg.isFromSuperadmin()) {
 				msg.from.admin = true;
 				msg.reply('ok');
 				return;
