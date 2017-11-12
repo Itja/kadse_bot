@@ -72,46 +72,46 @@ class Message {
 
 let commands = {
 	'/help': { act: msg => {
-		msg.reply('Kadse_Bot Version 2002 (von @Mitja)\n' +
+		msg.reply.text('Kadse_Bot Version 7923 (von @Mitja)\n' +
 				'/kdtstop - Du bekommst keine Kadse des Tages mehr\n' +
 				'/kdtstart - Du bekommst wieder die Kadse des Tages\n' +
 				'/reset - Gesehene Bilder zurücksetzen\n' +
 				'/show kadse_nummer - Zeige die Kadse mit der Nummer kadse_nummer');
 		if (msg.from.isPoster()) {
-			msg.reply('Sende dem Bot ein Bild, damit er es aufnimmt. Bitte nur kadsenrelevante, schöne Bilder senden!');
+			msg.reply.text('Sende dem Bot ein Bild, damit er es aufnimmt. Bitte nur kadsenrelevante, schöne Bilder senden!');
 		}
 		if (msg.from.isAdmin()) {
-			msg.reply('Admin commands: stats shutdown user printdb delimg kdtforce eval');
+			msg.reply.text('Admin commands: stats shutdown user printdb delimg kdtforce eval');
 		}
 	} }, 
 
 	'/kdtstop': { act: (msg) => {
 		msg.chat.kdt = false;
-		msg.reply('Okay, dann bekommst du halt keine Kadse des Tages mehr! (Wenn du deine Meinung änderst, schreib mir /kdtstart, um wieder Kadsen des Tages zu erhalten.)');
+		msg.reply.text('Okay, dann bekommst du halt keine Kadse des Tages mehr! (Wenn du deine Meinung änderst, schreib mir /kdtstart, um wieder Kadsen des Tages zu erhalten.)');
 	} },
 
 	'/kdtstart': { act: (msg) => {
 		msg.chat.kdt = true;
-		msg.reply('Ab sofort bekommst du wieder die Kadse des Tages!');
+		msg.reply.text('Ab sofort bekommst du wieder die Kadse des Tages!');
 	} },
 
 	'/reset': { act: (msg) => {
 		msg.chat.resetSeenImages();
-		msg.reply('Deine gesehenen Bilder wurden zurückgesetzt. Viel Spaß mit dem immergleichen Catcontent!');
+		msg.reply.text('Deine gesehenen Bilder wurden zurückgesetzt. Viel Spaß mit dem immergleichen Catcontent!');
 	} },
 
 	'/deleteme': { act: (msg) => {
-		msg.reply('Unimplemented');
+		msg.reply.text('Unimplemented');
 	} },
 
 	'/stats': { 
 		act: (msg) => {
-			msg.reply(JSON.stringify(msg.chat));
+			msg.reply.text(JSON.stringify(msg.chat));
 			if (msg.from.isPoster()) {
-				msg.reply('Stats for posters.. coming soon');
+				msg.reply.text('Stats for posters.. coming soon');
 			}
 			if (msg.from.isAdmin()) {
-				msg.reply('Stats for admins.. coming soon');
+				msg.reply.text('Stats for admins.. coming soon');
 			}
 		}
 	},
@@ -121,7 +121,7 @@ let commands = {
 			if (parseInt(cmd[1]) > 0) {
 				msg.chat.sendImageById(parseInt(cmd[1]));
 			} else {
-				msg.reply('Usage: /show KADSE_NUMMER');
+				msg.reply.text('Usage: /show KADSE_NUMMER');
 			}
 		}
 	},
@@ -129,38 +129,38 @@ let commands = {
 	'/shutdown': {
 		actAdmin: (msg) => {
 			db.write();
-			msg.reply('Shutdown not implemented');
+			msg.reply.text('Shutdown not implemented');
 		}
 	},
 
 	'/kdtforce': {
 		actAdmin: (msg) => {
 			setImmediate(party, true);
-			msg.reply('Gonna party right away!');
+			msg.reply.text('Gonna party right away!');
 		}
 	},
 
 	'/user': {
 		actAdmin: (msg, cmd) => {
 			if (cmd.length < 3) {
-				msg.reply('Usage: /user set USERID PROPERTY VALUE\n/user show USERID [PROPERTY]');
+				msg.reply.text('Usage: /user set USERID PROPERTY VALUE\n/user show USERID [PROPERTY]');
 				return;
 			} else {
 				let target = From.getById(cmd[2]);
 				if (!target) {
-					msg.reply('User with ID ' + cmd[2] + ' not found');
+					msg.reply.text('User with ID ' + cmd[2] + ' not found');
 					return;
 				}
 
 				if (cmd[1] == 'show') {
 					let ret = cmd[3] ? target[cmd[3]] : target;
-					msg.reply(JSON.stringify(ret));
+					msg.reply.text(JSON.stringify(ret));
 				} else if (cmd[1] == 'set') {
 					try {
 						target[cmd[3]] = JSON.parse(cmd[4]);
-						msg.reply('Set ' + cmd[3] + ' to ' + cmd[4] + ' on User with ID ' + cmd[2]);
+						msg.reply.text('Set ' + cmd[3] + ' to ' + cmd[4] + ' on User with ID ' + cmd[2]);
 					} catch(e) {
-						msg.reply('It doesn\'t seem that the following is a valid value: ' + cmd[4]);
+						msg.reply.text('It doesn\'t seem that the following is a valid value: ' + cmd[4]);
 					}
 				}
 
@@ -176,12 +176,12 @@ let commands = {
 					if (cmd[2]) {
 						ret = ret[cmd[2]];
 					}
-					msg.reply(JSON.stringify(ret));
+					msg.reply.text(JSON.stringify(ret).slice(0,1000));
 				} else {
-					msg.reply('Usage: /printdb { nextImgId | chats | froms | images | status }');
+					msg.reply.text('Usage: /printdb { nextImgId | chats | froms | images | status }');
 				}
 			} catch (e) {
-				msg.reply('That clearly didn\'t work.');
+				msg.reply.text('That clearly didn\'t work.');
 				console.log(e);
 			}
 		}
@@ -198,13 +198,13 @@ let commands = {
 					if (typeof ret !== 'string') {
 						ret = typeof ret;
 					}
-					msg.reply(ret);
+					msg.reply.text(ret.slice(0,1000));
 				} catch (e) {
-					msg.reply('That clearly didn\'t work: ' + e.message);
+					msg.reply.text('That clearly didn\'t work: ' + e.message);
 					console.log(e);
 				}
 			} else {
-				msg.reply('Eval isn\'t enabled.');
+				msg.reply.text('Eval isn\'t enabled.');
 			}
 		}
 	},
@@ -215,12 +215,12 @@ let commands = {
 				let imgid = parseInt(cmd[1]);
 				if (imgid > 0) {
 					delete db.db['images'][imgid];
-					msg.reply('If there has been such an image, it has been deleted.');
+					msg.reply.text('If there has been such an image, it has been deleted.');
 				} else {
-					msg.reply('Usage: /delimg IMAGE_ID');
+					msg.reply.text('Usage: /delimg IMAGE_ID');
 				}
 			} catch (e) {
-				msg.reply('Error: ' + e);
+				msg.reply.text('Error: ' + e);
 				console.log(e);
 			}
 		}
@@ -241,10 +241,10 @@ let commands = {
 		act: (msg) => {
 			if (msg.isFromSuperadmin()) {
 				msg.from.admin = true;
-				msg.reply('ok');
+				msg.reply.text('ok');
 				return;
 			}
-			msg.reply('Niemals!');
+			msg.reply.text('Niemals!');
 		}
 	}
 }
@@ -266,11 +266,11 @@ bot.on('text', (data, t, r) => {
 				} else if (curCmd.act) {
 					curCmd.act(msg, cmd);
 				} else {
-					msg.reply('Von dir lasse ich mir soetwas nicht sagen!');
+					msg.reply.text('Von dir lasse ich mir soetwas nicht sagen!');
 					cmdAvailable = false;
 				}
 			} else {
-				msg.reply('Diesen Befehl kenne ich nicht. Vielleicht hilft dir /help ?\n Ich hoffe, du bist stattdessen mit dieser Katze zufrieden?');
+				msg.reply.text('Diesen Befehl kenne ich nicht. Vielleicht hilft dir /help ?\n Ich hoffe, du bist stattdessen mit dieser Katze zufrieden?');
 				cmdAvailable = false;
 				sendImg = true;
 			}
@@ -290,7 +290,7 @@ bot.on('photo', (data, t, r) => {
 	let msg = new Message(data, t, r);
 	msg.ensureAccess(() => {
 		if (!msg.from.isPoster()) {
-			msg.reply('Danke für das Bild. Leider kenne ich dich noch nicht genug, um es in meine Datenbank aufzunehmen. Vielleicht ein andernmal.');
+			msg.reply.text('Danke für das Bild. Leider kenne ich dich noch nicht genug, um es in meine Sammlung aufzunehmen. Vielleicht ein andernmal.');
 			return;
 		}
 		bot.getFile(msg.photo[msg.photo.length - 1].file_id).then(file => {
@@ -304,22 +304,22 @@ bot.on('photo', (data, t, r) => {
 					.on('error', err => {
 						console.error('Error while streaming image to file', newImage, file);
 						console.error(targetFileStream);
-						msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (3)');
+						msg.reply.text('Sorry, leider ist mit dem Bild was schiefgegangen :-( (3)');
 					})
 					.on('finish', () => {
 						console.log('New Image (' + newImage.id + ') uploaded successful, writing config..');
 						db.addImage(newImage);
 						db.write(); 
-						return msg.reply('Danke für das Bild. Sehr hübsch. Ich habe es mit der ID ' + newImage.id + ' abgelegt.');
+						return msg.reply.text('Danke für das Bild. Sehr hübsch. Ich habe es mit der ID ' + newImage.id + ' abgelegt.');
 					});
 
 			} else {
 				console.error('Error while fetching file path. The Server responded with !file.ok');
-				msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (2)');
+				msg.reply.text('Sorry, leider ist mit dem Bild was schiefgegangen :-( (2)');
 			}
 		}).catch(e => {
 			console.error('Could not fetch file path', e, msg);
-			msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (1)');
+			msg.reply.text('Sorry, leider ist mit dem Bild was schiefgegangen :-( (1)');
 		});
 	});
 });
