@@ -294,12 +294,13 @@ bot.on('photo', (data, t, r) => {
 			return;
 		}
 		bot.getFile(msg.photo[msg.photo.length - 1].file_id).then(file => {
-			if (file.ok) {
+			if (file && file.fileLink) {
 				debug(file);
 				let newImage = new Image(msg.from);
 				let targetFileStream = fs.createWriteStream('img/' + newImage.filename);
+					//.get('https://api.telegram.org/file/bot' + BOT_TOKEN + '/' + file.result.file_path)
 				request
-					.get('https://api.telegram.org/file/bot' + BOT_TOKEN + '/' + file.result.file_path)
+					.get(file.fileLink)
 					.pipe(targetFileStream)
 					.on('error', err => {
 						console.error('Error while streaming image to file', newImage, file);
