@@ -1,0 +1,16 @@
+[Unit]
+Description=Kadse Bot
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/kadse_bot
+ExecStart=/opt/kadse_bot/start.sh
+User=kadse
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

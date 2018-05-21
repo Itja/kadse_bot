@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "start": "node koonbot.js",
-	"postinstall": "./setup.sh",
-	"purge": "./purge.sh"
+    "postinstall": "./setup.sh",
+    "purge": "./purge.sh"
   },
   "dependencies": {
+    "node-telegram-bot-api": "^0.30.0",
     "request": "^2.72.0"
   },
   "devDependencies": {}
