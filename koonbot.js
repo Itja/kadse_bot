@@ -82,8 +82,9 @@ class Message {
 let commands = {
 	'/help': { act: msg => {
 		msg.reply('Kadse_Bot Version 7923 (von @Mitja)\n' +
-				'/kdtstop - Du bekommst keine Kadse des Tages mehr\n' +
-				'/kdtstart - Du bekommst wieder die Kadse des Tages\n' +
+				'/stop - Du bekommst keine Kadse des Tages mehr\n' +
+				'/set X - Du bekommst die Kadse des Tages um X Uhr, anstatt um 18 Uhr\n' +
+				'/start - Du bekommst wieder die Kadse des Tages\n' +
 				'/reset - Gesehene Bilder zurücksetzen\n' +
 				'/show kadse_nummer - Zeige die Kadse mit der Nummer kadse_nummer');
 		if (msg.from.isPoster()) {
@@ -94,12 +95,12 @@ let commands = {
 		}
 	} }, 
 
-	'/kdtstop': { act: (msg) => {
+	'/stop': { act: (msg) => {
 		msg.chat.kdt = false;
-		msg.reply('Okay, dann bekommst du halt keine Kadse des Tages mehr! (Wenn du deine Meinung änderst, schreib mir /kdtstart, um wieder Kadsen des Tages zu erhalten.)');
+		msg.reply('Okay, dann bekommst du halt keine Kadse des Tages mehr! (Wenn du deine Meinung änderst, schreib mir /start, um wieder Kadsen des Tages zu erhalten.)');
 	} },
 
-	'/kdtstart': { act: (msg) => {
+	'/start': { act: (msg) => {
 		msg.chat.kdt = true;
 		msg.reply('Ab sofort bekommst du wieder die Kadse des Tages!');
 	} },
@@ -135,6 +136,19 @@ let commands = {
 		}
 	},
 
+	'/set': {
+		act: (msg, cmd) => {
+			let wantedHour = parseInt(cmd[1]);
+			if (isNaN(wantedHour) || wantedHour > 23 || wantedHour < 0) {
+				msg.reply('Bitte gib eine Zahl zwischen 0 und 23 an! (z.B. Für 14:00 Uhr: /set 14)')
+				return;
+			}
+			msg.chat.kdthour = wantedHour;
+			msg.reply('Ab sofort erhältst du die Kadse des Tages um ' + wantedHour + ':00 Uhr.')
+			db.write();
+		}
+	},
+
 	'/shutdown': {
 		actAdmin: (msg) => {
 			db.write();
@@ -146,6 +160,34 @@ let commands = {
 		actAdmin: (msg) => {
 			setImmediate(party, true);
 			msg.reply('Gonna party right away!');
+		}
+	},
+
+	'/chat': {
+		actAdmin: (msg, cmd) => {
+			if (cmd.length < 3) {
+				msg.reply('Usage: /chat set CHATID PROPERTY VALUE\n/chat show CHATID [PROPERTY]');
+				return;
+			} else {
+				let target = Chat.getById(cmd[2]);
+				if (!target) {
+					msg.reply('Chat with ID ' + cmd[2] + ' not found');
+					return;
+				}
+
+				if (cmd[1] === 'show') {
+					let ret = cmd[3] ? target[cmd[3]] : target;
+					msg.reply(JSON.stringify(ret, function(k,v) {return k==='seenImages'?v.length+'imgs':v}));
+				} else if (cmd[1] === 'set') {
+					try {
+						target[cmd[3]] = JSON.parse(cmd[4]);
+						msg.reply('Set ' + cmd[3] + ' to ' + cmd[4] + ' on User with ID ' + cmd[2]);
+					} catch(e) {
+						msg.reply('It doesn\'t seem that the following is a valid value: ' + cmd[4]);
+					}
+				}
+
+			}
 		}
 	},
 
@@ -339,38 +381,46 @@ bot.on('photo', (data, t, r) => {
 });
 
 let party = (forced) => {
-		let curt = new Date();
-		console.log("It's showtime!", new Date());
-		db.getAllChatIds().forEach((cid) => {
-			let c = Chat.getById(cid);
-			if (!c.hasOwnProperty('kdt') || c.kdt) { //migration, if no property, then do kdt
-				c.send('Es ist ca. ' + curt.getHours() + ' Uhr und damit mal wieder Zeit für die Kadse des Tages! (Du möchtest die Kadse des Tages nicht mehr? Schreib mir /kdtstop)');
+	let curt = new Date();
+	let currentHour = curt.getHours();
+	let totalNoParty = 0;
+	let totalParty = 0;
+	if (forced) {
+		console.log('Forced party for all guests!')
+	}
+	console.log(currentHour, "It's party time!", new Date());
+	db.getAllChatIds().forEach((cid) => {
+		let c = Chat.getById(cid);
+		if (!c.hasOwnProperty('kdt') || c.kdt) { //migration, if no property, then do kdt
+			let kdthour = c.hasOwnProperty('kdthour') ? c.kdthour : 18;
+			if (kdthour === currentHour || forced) {
+				if (!forced) {
+					c.send('Es ist ca. ' + curt.getHours() + ' Uhr und damit mal wieder Zeit für die Kadse des Tages! (Du möchtest die Kadse des Tages nicht mehr? Schreib mir /stop)');
+				} else {
+					c.send('Hier eine Kadse außer der Reihe!');
+				}
 				c.sendUnseenImage();
-			}
-		});
-		
-		console.log('Party is over.');
-		if (!forced) {
-			setTimeout(party, 1000 * 60 * 60 * 24);
-			console.log('Next Partytime set.');
+				totalParty++;
+			} else { totalNoParty++; }
 		}
-		db.write();
-	};
+	});
+	
+	if (!forced) {
+		setTimeout(party, 1000 * 60 * 60);
+		console.log(currentHour, 'Party with', totalParty, 'guests is over.', totalNoParty, 'will party another time.');
+	}
+	db.write();
+};
 
 setImmediate(() => {
 	let d = new Date();
-	let partyHour = 18;
 	let cur = new Date();
-	d.setHours(partyHour);
+	d.setHours(d.getHours() + 1);
 	d.setMinutes(0);
 	d.setSeconds(0);
 	d.setMilliseconds(0);
-	if (cur.getHours() >= partyHour) {
-		console.log('Party is a day away :-/');
-		d.setDate(cur.getDate() + 1);
-	}
 	let diff = d.getTime() - cur.getTime();
-	console.log('Party is at ', d, ' (which is in ', diff, 'ms)');
+	console.log('First party is at ', d, ' (which is in ', diff, 'ms)');
 	setTimeout(party, diff);
 });
 
