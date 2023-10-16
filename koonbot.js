@@ -195,7 +195,40 @@ let commands = {
 	'/user': {
 		actAdmin: (msg, cmd) => {
 			if (cmd.length < 3) {
-				msg.reply('Usage: /user set USERID PROPERTY VALUE\n/user show USERID [PROPERTY]');
+                                let rpl = ''
+                                let allIds = db.getAllFromIds()
+				msg.reply('Usage: /user set USERID PROPERTY VALUE\n/user show USERID [PROPERTY]\nCurrently, there are ' + allIds.length + ' users (froms) in the database:\n');
+
+                                let showall = cmd.length == 2 && cmd[1] == 'showall'
+
+                                let i = 0
+                                for (let j = 0; j < allIds.length; j++)
+                                {
+                                    let fid = allIds[j]
+                                    let c = null
+                                    if (fid in db.db.chats) {
+                                       c = db.db.chats[fid] 
+                                    }
+                                    console.log('checking', fid, c, showall)
+                                    let kdt = c && (!c.hasOwnProperty('kdt') || c.kdt)
+                                    if (!showall && !kdt)
+                                        continue
+                                    i++
+                                    let f = db.getFrom(fid)
+                                    let lastname = (f.last_name ? ' ' + f.last_name : '')
+                                    let ct = 'No chat'
+                                    if (c) {
+                                       ct = 'KDT ' + (kdt ? 'on' + (c.kdthour ? ' at ' + c.kdthour : '') + (!c.hasOwnProperty('kdt') ? ' [neverstop]' : '')  : 'off') 
+                                         + (c.seenImages ? ' with ' + c.seenImages.length + ' seen images' : '')
+                                    } 
+                                    let rights = (f.admin ? ' (ADMIN)' : '') + (f.poster ? ' (Poster)' : '') 
+                                    rpl += '[' + fid + '] ' + f.first_name + lastname + rights + ': ' + ct + '\n'
+                                    if (i % 16 == 15) {
+                                        msg.reply(rpl)
+                                        rpl = ''
+                                    }
+                                }
+                                msg.reply(rpl)
 				return;
 			} else {
 				let target = From.getById(cmd[2]);
