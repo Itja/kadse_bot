@@ -92,6 +92,7 @@ let commands = {
 		}
 		if (msg.from.isAdmin()) {
 			msg.reply('Admin commands: stats shutdown user printdb delimg kdtforce eval broadcast');
+			msg.reply('Disable kdt for user: /eval db.db.chats["CHAT_ID"] = false');
 		}
 	} }, 
 
@@ -391,7 +392,7 @@ let party = (forced) => {
 	console.log(currentHour, "It's party time!", new Date());
 	db.getAllChatIds().forEach((cid) => {
 		let c = Chat.getById(cid);
-		if (!c.hasOwnProperty('kdt') || c.kdt) { //migration, if no property, then do kdt
+		if (c && (!c.hasOwnProperty('kdt') || c.kdt)) { //migration, if no property, then do kdt
 			let kdthour = c.hasOwnProperty('kdthour') ? c.kdthour : 18;
 			if (kdthour === currentHour || forced) {
 				if (!forced) {
