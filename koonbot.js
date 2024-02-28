@@ -1,7 +1,8 @@
 "use strict";
 const telegram = require('node-telegram-bot-api');
 const fs = require('fs');
-const request = require('request');
+const http = require('http');
+const https = require('https');
 
 const db = require('./lib/db.js');
 const config = require('./config.js');
@@ -388,9 +389,9 @@ bot.on('photo', (data, t, r) => {
 				let fileUrl = 'https://api.telegram.org/file/bot' + BOT_TOKEN + '/' + file.file_path;
 				//debug('Loading URL', fileUrl);
 				let targetFileStream = fs.createWriteStream('img/' + newImage.filename);
-				request
-					.get(fileUrl)
-					.pipe(targetFileStream)
+                                const request = https.get(fileUrl, function(response) {
+                                    response.pipe(targetFileStream);
+                                    targetFileStream
 					.on('error', err => {
 						console.error('Error while streaming image to file', newImage, file);
 						console.error(targetFileStream);
@@ -402,7 +403,7 @@ bot.on('photo', (data, t, r) => {
 						db.write(); 
 						return msg.reply('Danke für das Bild. Sehr hübsch. Ich habe es mit der ID ' + newImage.id + ' abgelegt.');
 					});
-
+                                });
 			} else {
 				console.error('Error while fetching file path. The Server responded with !file.file_path', file);
 				msg.reply('Sorry, leider ist mit dem Bild was schiefgegangen :-( (2)');

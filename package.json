@@ -8,7 +8,7 @@
     "purge": "./purge.sh"
   },
   "dependencies": {
-    "node-telegram-bot-api": "^0.30.0",
+    "node-telegram-bot-api": "^0.64.0",
     "request": "^2.72.0"
   },
   "devDependencies": {}
