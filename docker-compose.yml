@@ -1,0 +1,10 @@
+services:
+  bot:
+    image: kadse_bot
+    container_name: kadse_bot
+    restart: always
+    volumes:
+      - ./config.js:/app/config.js:ro
+      - ./data/img:/app/img
+      - ./data/db.json:/app/db.json
+
