@@ -7,4 +7,6 @@ services:
       - ./config.js:/app/config.js:ro
       - ./data/img:/app/img
       - ./data/db.json:/app/db.json
+    environment:
+      - TZ=Europe/Berlin
 
